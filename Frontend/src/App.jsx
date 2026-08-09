@@ -34,7 +34,7 @@ function App() {
     setMensaje("");
 
     try {
-      const respuesta = await fetch("http://127.0.0.1:8000/login/", {
+      const respuesta = await fetch("https://sistemajuridico.onrender.com/login/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -63,7 +63,7 @@ function App() {
   const cargarExpedientes = async () => {
     try {
       const respuesta = await fetch(
-        "http://127.0.0.1:8000/expedientes/"
+        "https://sistemajuridico.onrender.com/expedientes/"
       );
 
       const datos = await respuesta.json();
@@ -85,7 +85,7 @@ function App() {
   const cargarClientes = async () => {
     try {
       const respuesta = await fetch(
-        "http://127.0.0.1:8000/clientes/"
+        "https://sistemajuridico.onrender.com/clientes/"
       );
 
       const datos = await respuesta.json();
@@ -110,7 +110,7 @@ function App() {
 
     try {
       const respuesta = await fetch(
-        "http://127.0.0.1:8000/clientes/",
+        "https://sistemajuridico.onrender.com/clientes/",
         {
           method: "POST",
           headers: {
@@ -162,7 +162,7 @@ function App() {
 
     try {
       const respuesta = await fetch(
-        `http://127.0.0.1:8000/clientes/${idcliente}`,
+        `https://sistemajuridico.onrender.com/clientes/${idcliente}`,
         {
           method: "DELETE"
         }
@@ -205,7 +205,7 @@ function App() {
       }
 
       const respuesta = await fetch(
-        `http://127.0.0.1:8000/expedientes/buscar?${parametros.toString()}`
+        `https://sistemajuridico.onrender.com/expedientes/buscar?${parametros.toString()}`
       );
 
       const datos = await respuesta.json();

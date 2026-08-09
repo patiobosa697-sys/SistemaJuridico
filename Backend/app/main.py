@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import engine
+from app.database import engine, Base
 from app.routes.rol import router as rol_router
 from app.routes.usuario import router as usuario_router
 from app.routes.especialidad import router as especialidad_router
@@ -47,8 +47,12 @@ def conectar_bd():
     try:
         with engine.connect() as connection:
             print("✅ Conexión exitosa con PostgreSQL")
+
+        Base.metadata.create_all(bind=engine)
+        print("✅ Tablas creadas/verificadas correctamente")
+
     except Exception as e:
-        print("❌ Error al conectar con PostgreSQL:")
+        print("❌ Error al conectar/crear las tablas:")
         print(e)
 
 @app.get("/")

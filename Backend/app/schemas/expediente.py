@@ -1,7 +1,6 @@
 from pydantic import BaseModel
 from datetime import date
 
-
 class ExpedienteBase(BaseModel):
     codigointerno: str | None = None
     numeroradicado: str | None = None
@@ -10,8 +9,8 @@ class ExpedienteBase(BaseModel):
     estado: str | None = None
     fechaapertura: date | None = None
     fechacierre: date | None = None
-    idcliente: int
-    idespecialidad: int
+    idcliente: int | None = None
+    idespecialidad: int | None = None
 
 
 class ExpedienteCreate(ExpedienteBase):

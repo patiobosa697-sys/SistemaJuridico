@@ -1,5 +1,6 @@
 import { useState } from "react";
 import fondoLogin from "./assets/fondo-login.jpeg";
+import "./App.css";
 
 function App() {
   const [correo, setCorreo] = useState("");
@@ -25,6 +26,20 @@ function App() {
     direccion: ""
   });
 
+  const [nuevoExpediente, setNuevoExpediente] = useState({
+    codigointerno: "",
+    numeroradicado: "",
+    asunto: "",
+    descripcion: "",
+    estado: "Activo",
+    fechaapertura: "",
+    fechacierre: "",
+    idcliente: "",
+    idespecialidad: ""
+  });
+  const [especialidades, setEspecialidades] = useState([]);
+  const [mensajeExpediente, setMensajeExpediente] = useState("");
+
   const [mensajeCliente, setMensajeCliente] = useState("");
 
   const [resultados, setResultados] = useState([]);
@@ -47,6 +62,8 @@ function App() {
 
       const datos = await respuesta.json();
 
+      console.log("RESPUESTA DEL LOGIN:", datos);
+
       if (!respuesta.ok) {
         setMensaje(datos.detail || "Correo o contraseña incorrectos");
         return;
@@ -62,19 +79,121 @@ function App() {
 
   const cargarExpedientes = async () => {
     try {
+      const [respuestaExpedientes, respuestaClientes, respuestaEspecialidades] =
+        await Promise.all([
+          fetch("https://sistemajuridico.onrender.com/expedientes/"),
+          fetch("https://sistemajuridico.onrender.com/clientes/"),
+          fetch("https://sistemajuridico.onrender.com/especialidades/")
+        ]);
+
+      const datosExpedientes = await respuestaExpedientes.json();
+      const datosClientes = await respuestaClientes.json();
+      const datosEspecialidades = await respuestaEspecialidades.json();
+
+      if (!respuestaExpedientes.ok) {
+        alert("No se pudieron cargar los expedientes");
+        return;
+      }
+
+      setExpedientes(datosExpedientes);
+
+      if (respuestaClientes.ok) {
+        setClientes(datosClientes);
+      }
+
+      if (respuestaEspecialidades.ok) {
+        setEspecialidades(datosEspecialidades);
+      }
+
+      setModulo("expedientes");
+
+    } catch (error) {
+      console.error(error);
+      alert("Error al conectar con la API");
+    }
+  };
+
+  const registrarExpediente = async (e) => {
+    e.preventDefault();
+    setMensajeExpediente("");
+
+    try {
       const respuesta = await fetch(
-        "https://sistemajuridico.onrender.com/expedientes/"
+        "https://sistemajuridico.onrender.com/expedientes/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            ...nuevoExpediente,
+            idcliente: Number(nuevoExpediente.idcliente),
+            idespecialidad: Number(nuevoExpediente.idespecialidad),
+            fechacierre: nuevoExpediente.fechacierre || null
+          })
+        }
       );
 
       const datos = await respuesta.json();
 
       if (!respuesta.ok) {
-        alert("No se pudieron cargar los expedientes");
+        setMensajeExpediente(
+          datos.detail || "No se pudo registrar el expediente"
+        );
         return;
       }
 
-      setExpedientes(datos);
-      setModulo("expedientes");
+      setMensajeExpediente(
+        "Expediente registrado correctamente"
+      );
+
+      setNuevoExpediente({
+        codigointerno: "",
+        numeroradicado: "",
+        asunto: "",
+        descripcion: "",
+        estado: "Activo",
+        fechaapertura: "",
+        fechacierre: "",
+        idcliente: "",
+        idespecialidad: ""
+      });
+
+      cargarExpedientes();
+
+    } catch (error) {
+      console.error(error);
+      setMensajeExpediente("Error al conectar con la API");
+    }
+  };
+
+  const eliminarExpediente = async (idexpediente) => {
+    const confirmar = window.confirm(
+      `¿Está seguro de que desea eliminar el expediente ${idexpediente}?`
+    );
+
+    if (!confirmar) {
+      return;
+    }
+
+    try {
+      const respuesta = await fetch(
+        `https://sistemajuridico.onrender.com/expedientes/${idexpediente}`,
+        {
+          method: "DELETE"
+        }
+      );
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        alert(datos.detail || "No se pudo eliminar el expediente");
+        return;
+      }
+
+      alert("Expediente eliminado correctamente");
+
+      cargarExpedientes();
 
     } catch (error) {
       console.error(error);
@@ -230,6 +349,73 @@ function App() {
     setModulo("inicio");
     setExpedientes([]);
   };
+
+  // PÁGINA PRINCIPAL
+  if (usuario && modulo === "inicio") {
+    return (
+      <div className="panel-container">
+
+        <header className="panel-header">
+          <div>
+            <h1>Sistema Jurídico</h1>
+            <p>
+              Bienvenido, {usuario.nombres} {usuario.apellidos}
+            </p>
+          </div>
+
+          <button
+            className="cerrar-btn"
+            onClick={cerrarSesion}
+          >
+            Cerrar sesión
+          </button>
+        </header>
+
+        <main className="panel-main">
+
+          <h2>Seleccione el módulo que desea utilizar</h2>
+
+          <div className="modulos-grid">
+
+            <div
+              className="modulo-card"
+              onClick={() => setModulo("consultas")}
+            >
+              <div className="modulo-icono">🔎</div>
+              <h3>Consultas</h3>
+              <p>
+                Buscar expedientes por diferentes criterios
+              </p>
+            </div>
+
+            <div
+              className="modulo-card"
+              onClick={cargarExpedientes}
+            >
+              <div className="modulo-icono">📁</div>
+              <h3>Expedientes</h3>
+              <p>
+                Consultar y gestionar expedientes jurídicos
+              </p>
+            </div>
+
+            <div
+              className="modulo-card"
+              onClick={cargarClientes}
+            >
+              <div className="modulo-icono">👤</div>
+              <h3>Clientes</h3>
+              <p>
+                Consultar y gestionar información de clientes
+              </p>
+            </div>
+
+          </div>
+
+        </main>
+      </div>
+    );
+  }
 
   // MÓDULO CLIENTES
   if (usuario && modulo === "clientes") {
@@ -449,14 +635,14 @@ function App() {
                     <td>{cliente.telefono}</td>
                     <td>{cliente.correo}</td>
                     <td>
-                    <button
-                      type="button"
-                      className="eliminar-btn"
-                      onClick={() => eliminarCliente(cliente.idcliente)}
-                    >
-                      🗑️
-                    </button>
-                  </td>
+                      <button
+                        type="button"
+                        className="eliminar-btn"
+                        onClick={() => eliminarCliente(cliente.idcliente)}
+                      >
+                        🗑️
+                      </button>
+                    </td>
                   </tr>
                 ))}
 
@@ -658,115 +844,311 @@ function App() {
           <h2>Expedientes</h2>
 
           <p className="subtitulo">
-            Expedientes registrados en el sistema
+            Registrar y gestionar expedientes jurídicos
           </p>
+
+          {/* FORMULARIO */}
+
+          <div className="cliente-form-container">
+
+            <h3>Añadir nuevo expediente</h3>
+
+            <form onSubmit={registrarExpediente}>
+
+              <div className="cliente-form-grid">
+
+                <div>
+                  <label>Código interno</label>
+
+                  <input
+                    type="text"
+                    placeholder="Ej: EXP-001"
+                    value={nuevoExpediente.codigointerno}
+                    onChange={(e) =>
+                      setNuevoExpediente({
+                        ...nuevoExpediente,
+                        codigointerno: e.target.value
+                      })
+                    }
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label>Número de radicado</label>
+
+                  <input
+                    type="text"
+                    placeholder="Ej: 2026-000001"
+                    value={nuevoExpediente.numeroradicado}
+                    onChange={(e) =>
+                      setNuevoExpediente({
+                        ...nuevoExpediente,
+                        numeroradicado: e.target.value
+                      })
+                    }
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label>Asunto</label>
+
+                  <input
+                    type="text"
+                    placeholder="Asunto del proceso"
+                    value={nuevoExpediente.asunto}
+                    onChange={(e) =>
+                      setNuevoExpediente({
+                        ...nuevoExpediente,
+                        asunto: e.target.value
+                      })
+                    }
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label>Estado</label>
+
+                  <select
+                    value={nuevoExpediente.estado}
+                    onChange={(e) =>
+                      setNuevoExpediente({
+                        ...nuevoExpediente,
+                        estado: e.target.value
+                      })
+                    }
+                    required
+                  >
+                    <option value="Activo">Activo</option>
+                    <option value="En proceso">En proceso</option>
+                    <option value="Cerrado">Cerrado</option>
+                    <option value="Suspendido">Suspendido</option>
+                  </select>
+                </div>
+
+                <div className="campo-completo">
+                  <label>Descripción</label>
+
+                  <textarea
+                    placeholder="Descripción del expediente"
+                    value={nuevoExpediente.descripcion}
+                    onChange={(e) =>
+                      setNuevoExpediente({
+                        ...nuevoExpediente,
+                        descripcion: e.target.value
+                      })
+                    }
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label>Fecha de apertura</label>
+
+                  <input
+                    type="date"
+                    value={nuevoExpediente.fechaapertura}
+                    onChange={(e) =>
+                      setNuevoExpediente({
+                        ...nuevoExpediente,
+                        fechaapertura: e.target.value
+                      })
+                    }
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label>Fecha de cierre</label>
+
+                  <input
+                    type="date"
+                    value={nuevoExpediente.fechacierre}
+                    onChange={(e) =>
+                      setNuevoExpediente({
+                        ...nuevoExpediente,
+                        fechacierre: e.target.value
+                      })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label>Cliente</label>
+
+                  <select
+                    value={nuevoExpediente.idcliente}
+                    onChange={(e) =>
+                      setNuevoExpediente({
+                        ...nuevoExpediente,
+                        idcliente: e.target.value
+                      })
+                    }
+                    required
+                  >
+                    <option value="">
+                      Seleccione un cliente
+                    </option>
+
+                    {clientes.map((cliente) => (
+                      <option
+                        key={cliente.idcliente}
+                        value={cliente.idcliente}
+                      >
+                        {cliente.nombres} {cliente.apellidos}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label>Especialidad</label>
+
+                  <select
+                    value={nuevoExpediente.idespecialidad}
+                    onChange={(e) =>
+                      setNuevoExpediente({
+                        ...nuevoExpediente,
+                        idespecialidad: e.target.value
+                      })
+                    }
+                    required
+                  >
+                    <option value="">
+                      Seleccione una especialidad
+                    </option>
+
+                    {especialidades.map((especialidad) => (
+                      <option
+                        key={especialidad.idespecialidad}
+                        value={especialidad.idespecialidad}
+                      >
+                        {especialidad.nombreesp}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+              </div>
+
+              <button
+                type="submit"
+                className="registrar-btn"
+              >
+                Registrar expediente
+              </button>
+
+            </form>
+
+            {mensajeExpediente && (
+              <p className="mensaje-cliente">
+                {mensajeExpediente}
+              </p>
+            )}
+
+          </div>
+
+          {/* TABLA */}
+
+          <h3 className="resultados-titulo">
+            Expedientes registrados
+          </h3>
 
           <div className="tabla-container">
 
             <table>
+
               <thead>
                 <tr>
                   <th>ID</th>
                   <th>Código</th>
-                  <th>Número de radicado</th>
+                  <th>Radicado</th>
                   <th>Asunto</th>
                   <th>Estado</th>
                   <th>Cliente</th>
+                  <th>Especialidad</th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
 
               <tbody>
-                {expedientes.map((expediente) => (
-                  <tr key={expediente.idexpediente}>
-                    <td>{expediente.idexpediente}</td>
-                    <td>{expediente.codigointerno}</td>
-                    <td>{expediente.numeroradicado}</td>
-                    <td>{expediente.asunto}</td>
-                    <td>{expediente.estado}</td>
-                    <td>{expediente.idcliente}</td>
-                  </tr>
-                ))}
+
+                {expedientes.map((expediente) => {
+
+                  const cliente = clientes.find(
+                    (c) => c.idcliente === expediente.idcliente
+                  );
+
+                  const especialidad = especialidades.find(
+                    (e) => e.idespecialidad === expediente.idespecialidad
+                  );
+
+                  return (
+                    <tr key={expediente.idexpediente}>
+
+                      <td>
+                        {expediente.idexpediente}
+                      </td>
+
+                      <td>
+                        {expediente.codigointerno}
+                      </td>
+
+                      <td>
+                        {expediente.numeroradicado}
+                      </td>
+
+                      <td>
+                        {expediente.asunto}
+                      </td>
+
+                      <td>
+                        {expediente.estado}
+                      </td>
+
+                      <td>
+                        {cliente
+                          ? `${cliente.nombres} ${cliente.apellidos}`
+                          : expediente.idcliente}
+                      </td>
+
+                      <td>
+                        {especialidad
+                          ? especialidad.nombreesp
+                          : expediente.idespecialidad}
+                      </td>
+
+                      <td>
+
+                        <button
+                          type="button"
+                          className="eliminar-btn"
+                          onClick={() =>
+                            eliminarExpediente(
+                              expediente.idexpediente
+                            )
+                          }
+                        >
+                          🗑️
+                        </button>
+
+                      </td>
+
+                    </tr>
+                  );
+
+                })}
+
               </tbody>
+
             </table>
 
           </div>
 
         </main>
-      </div>
-    );
-  }
 
-  // PANEL PRINCIPAL
-  if (usuario) {
-    return (
-      <div className="panel-container">
-
-        <header className="panel-header">
-          <div>
-            <h1>Sistema Jurídico</h1>
-            <p>Gestión del bufete jurídico</p>
-          </div>
-
-          <button
-            className="cerrar-btn"
-            onClick={cerrarSesion}
-          >
-            Cerrar sesión
-          </button>
-        </header>
-
-        <main className="panel-main">
-
-          <h2>
-            Bienvenido, {usuario.nombres} {usuario.apellidos}
-          </h2>
-
-          <p className="subtitulo">
-            Seleccione el módulo que desea utilizar
-          </p>
-
-
-          <div className="modulos">
-            <div className="modulos">
-
-              <button
-                className="modulo"
-                onClick={() => setModulo("consultas")}
-              >
-                <span>🔎</span>
-                <h3>Consultas</h3>
-                <p>
-                  Buscar expedientes por diferentes criterios
-                </p>
-              </button>
-
-              <button
-                className="modulo"
-                onClick={cargarExpedientes}
-              >
-                <span>📁</span>
-                <h3>Expedientes</h3>
-                <p>
-                  Consultar y gestionar expedientes jurídicos
-                </p>
-              </button>
-
-              <button
-                className="modulo"
-                onClick={cargarClientes}
-              >
-                <span>👤</span>
-                <h3>Clientes</h3>
-                <p>
-                  Consultar y gestionar información de clientes
-                </p>
-              </button>
-
-            </div>
-
-          </div>
-
-        </main>
       </div>
     );
   }
